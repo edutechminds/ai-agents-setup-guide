@@ -1,0 +1,77 @@
+#cloud-config
+# ============================================================
+#  Agent VM Setup - Pi Coding Agent + Hermes Agent
+#
+#  USAGE:
+#  1. Save as ~/agent-vm-init.yaml
+#  2. multipass launch 24.04 --name agents --cpus 4 --memory 8G --disk 40G --cloud-init ~/agent-vm-init.yaml
+#  3. Wait 10-15 min, then: multipass shell agents
+# ============================================================
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - curl
+  - build-essential
+  - tmux
+  - ripgrep
+  - jq
+  - unzip
+  - htop
+
+write_files:
+  - path: /home/ubuntu/setup-agents.sh
+    permissions: '0755'
+    owner: ubuntu:ubuntu
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo ""
+      echo "=========================================="
+      echo "  STEP 1 of 4: Installing Node.js 22"
+      echo "=========================================="
+      curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+      sudo apt install -y nodejs
+      echo "  Node version: $(node --version)"
+
+      echo ""
+      echo "=========================================="
+      echo "  STEP 2 of 4: Installing Pi Coding Agent"
+      echo "=========================================="
+      npm install -g @mariozechner/pi-coding-agent
+      echo "  Pi installed!"
+
+      echo ""
+      echo "=========================================="
+      echo "  STEP 3 of 4: Installing uv + Python"
+      echo "=========================================="
+      curl -LsSf https://astral.sh/uv/install.sh | sh
+      export PATH="$HOME/.local/bin:$PATH"
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+
+      echo ""
+      echo "=========================================="
+      echo "  STEP 4 of 4: Installing Hermes Agent"
+      echo "=========================================="
+      curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+
+      cat > ~/.tmux.conf << 'TMUX'
+      set -g mouse on
+      set -g base-index 1
+      setw -g pane-base-index 1
+      set -g status-style 'bg=#333333 fg=#ffffff'
+      set -g history-limit 50000
+      TMUX
+
+      echo ""
+      echo "============================================"
+      echo "  ALL DONE!"
+      echo "  Run 'pi' for Pi coding agent"
+      echo "  Run 'hermes' for Hermes Agent"
+      echo "============================================"
+
+runcmd:
+  - sudo -u ubuntu bash /home/ubuntu/setup-agents.sh
